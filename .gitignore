@@ -1,0 +1,11 @@
+
+
+# sbt
+target
+.classpath
+.project
+.cache
+
+# emacs
+.ensime
+.ensime_cache
