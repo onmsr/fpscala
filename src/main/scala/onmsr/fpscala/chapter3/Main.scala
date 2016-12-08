@@ -61,16 +61,23 @@ object List {
   def foldLeftByFoldRight[A, B](l: List[A], z: B)(f: (B, A) => B): B = {
     foldRight(l, (b:B) => b)((a,g) => b => g(f(b,a)))(z)
   }
+  def append[A](l1: List[A], l2: List[A]): List[A] = {
+    foldLeft(l1, List[A]())((a, b) => {
+      b match {
+        case Nil => l2
+        case _ => Cons(b, a)
+      }
+    })
+  }
 }
 
 /*
  * List(1, 2, 3)
  *  
- * - fold left
- *     fl
- *  1     f
- *      2   f
- *        3   u
+ *     c
+ *  1     c
+ *      2   c
+ *        3   nil
  */
 
 /*

@@ -57,6 +57,10 @@ class MainSpec extends Specification {
       List.foldLeftByFoldRight(List(1, 2, 3, 4), 1)(_+_) must_== 11
       List.foldLeftByFoldRight(List(1, 2, 3, 4), 1)(_*_) must_== 24
     }
+    "append" in {
+      List.append(List(1, 2), List()) must_== List(1, 2)
+      List.append(List(1, 2), List(3, 4)) must_== List(1, 2, 3, 4)
+    }
   }
 }
 
