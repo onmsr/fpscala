@@ -61,6 +61,86 @@ class MainSpec extends Specification {
       List.append(List(1, 2), List()) must_== List(1, 2)
       List.append(List(1, 2), List(3, 4)) must_== List(1, 2, 3, 4)
     }
+    "appendAll" in {
+      List.appendAll(List(1, 2), List()) must_== List(1, 2)
+      List.appendAll(List(1, 2), List(3, 4), List(5, 6)) must_== List(1, 2, 3, 4, 5, 6)
+    }
+    "add1" in {
+      List.add1(List(1, 2)) must_== List(2, 3)
+    }
+    "itself" in {
+      List.itself(List(1, 2, 3)) must_== List(1, 2, 3)
+    }
+    "doubleToString" in {
+      List.doubleToString(List(1.0, 2.0, 3.0)) must_== List("1.0", "2.0", "3.0")
+    }
+    "map" in {
+      List.map(List(1, 2, 3))((v: Int) => v+1) must_== List(2, 3, 4)
+    }
+    "filter" in {
+      List.filter(List(1, 2, 3, 4))((v: Int) => v%2 == 0) must_== List(2, 4)
+    }
+    "flatMap" in {
+      List.flatMap(List(1, 2, 3))(i => List(i, i)) must_== List(1, 1, 2, 2, 3, 3)
+    }
+    "filterByFlatMap" in {
+      List.filterByFlatMap(List(1, 2, 3, 4))((v: Int) => v%2 == 0) must_== List(2, 4)
+    }
+    "addEachListElement" in {
+      List.addEachListElement(List(1, 2, 3), List(4, 5, 6)) must_== List(5, 7, 9)
+    }
+    "zipWith" in {
+      List.zipWith(List(1, 2, 3), List(4, 5, 6))((a, b) => { a+b }) must_== List(5, 7, 9)
+    }
+    "hasSubsequence" in {
+      List.hasSubsequence(List(1, 2, 3, 4), List(1, 2)) must_== true
+      List.hasSubsequence(List(1, 2, 3, 4), List(1, 3)) must_== false
+      List.hasSubsequence(List(1, 2, 3, 4), List(3, 4)) must_== true
+      List.hasSubsequence(List(1, 2, 3, 4), List(3, 5)) must_== false
+    }
+  }
+
+  "Tree" should {
+    "size" in {
+      Tree.size(Leaf(1)) must_== 1
+      Tree.size(Branch(Leaf(1), Leaf(2))) must_== 3
+      Tree.size(Branch(Branch(Leaf(1), Leaf(2)), Leaf(2))) must_== 5
+    }
+    "maximum" in {
+      Tree.maximum(Leaf(1)) must_== 1
+      Tree.maximum(Branch(Leaf(1), Leaf(2))) must_== 2
+      Tree.maximum(Branch(Branch(Leaf(3), Leaf(8)), Leaf(2))) must_== 8
+    }
+    "depth" in {
+      Tree.depth(Leaf(1)) must_== 0
+      Tree.depth(Branch(Leaf(1), Leaf(2))) must_== 1
+      Tree.depth(Branch(Branch(Leaf(3), Leaf(8)), Leaf(2))) must_== 2
+    }
+    "map" in {
+      Tree.map(Leaf(1))((v) => v+1) must_== Leaf(2)
+      Tree.map(Branch(Leaf(1), Leaf(2)))((v) => v+1) must_== Branch(Leaf(2), Leaf(3))
+      Tree.map(Branch(Branch(Leaf(3), Leaf(8)), Leaf(2)))((v) => v+1) must_== Branch(Branch(Leaf(4), Leaf(9)), Leaf(3))
+    }
+    "sizeByFold" in {
+      Tree.sizeByFold(Leaf(1)) must_== 1
+      Tree.sizeByFold(Branch(Leaf(1), Leaf(2))) must_== 3
+      Tree.sizeByFold(Branch(Branch(Leaf(1), Leaf(2)), Leaf(2))) must_== 5
+    }
+    "maximumByFold" in {
+      Tree.maximumByFold(Leaf(1)) must_== 1
+      Tree.maximumByFold(Branch(Leaf(1), Leaf(2))) must_== 2
+      Tree.maximumByFold(Branch(Branch(Leaf(3), Leaf(8)), Leaf(2))) must_== 8
+    }
+    "depthByFold" in {
+      Tree.depthByFold(Leaf(1)) must_== 0
+      Tree.depthByFold(Branch(Leaf(1), Leaf(2))) must_== 1
+      Tree.depthByFold(Branch(Branch(Leaf(3), Leaf(8)), Leaf(2))) must_== 2
+    }
+    "mapByFold" in {
+      Tree.mapByFold(Leaf(1))((v) => v+1) must_== Leaf(2)
+      Tree.mapByFold(Branch(Leaf(1), Leaf(2)))((v) => v+1) must_== Branch(Leaf(2), Leaf(3))
+      Tree.mapByFold(Branch(Branch(Leaf(3), Leaf(8)), Leaf(2)))((v) => v+1) must_== Branch(Branch(Leaf(4), Leaf(9)), Leaf(3))
+    }
   }
 }
 
