@@ -1,5 +1,8 @@
 package onmsr.fpscala.chapter7
 
+
+import java.util.concurrent.{ Callable, ExecutorService, Future, TimeUnit }
+
 /**
  * [メモ]
  * 簡単な例が大事
@@ -7,7 +10,73 @@ package onmsr.fpscala.chapter7
  *
  *
  */
-object Par {
+object Par extends Parallel {
+  type Par[A] = (ExecutorService) => Future[A]
+
+  private case class UnitFuture[A](get: A) extends Future[A] {
+    def cancel(mayInterruptIfRunning: Boolean): Boolean = false
+    def isCancelled(): Boolean = true
+    def isDone(): Boolean = true
+    def get(timeout: Long, unit: TimeUnit): A = get
+  }
+
+  // わからなかった
+  private case class Map2Future[A, B, C](a: Future[A], b: Future[B], f: (A, B) => C) extends Future[C] {
+
+    @volatile var cache: Option[C] = None
+    def isDone = cache.isDefined
+    def isCancelled = a.isCancelled || b.isCancelled
+    def cancel(mayInterruptIfRunning: Boolean) = a.cancel(mayInterruptIfRunning) || b.cancel(mayInterruptIfRunning)
+    def get = compute(Long.MaxValue)
+    def get(timeout: Long, units: TimeUnit): C = compute(TimeUnit.NANOSECONDS.convert(timeout, units))
+
+    private def compute(timeoutInNanos: Long): C = cache match {
+      case Some(c) => c
+      case None => {
+        val start = System.nanoTime
+        val ar = a.get(timeoutInNanos, TimeUnit.NANOSECONDS)
+        val stop = System.nanoTime
+        val aTime = stop - start
+        val br = b.get(timeoutInNanos - aTime, TimeUnit.NANOSECONDS)
+        val result = f(ar, br)
+        cache = Some(result)
+        result
+      }
+    }
+  }
+
+  def unit[A](a: A): Par[A] = es => UnitFuture(a)
+  def map2[A, B, C](a: Par[A], b: Par[B])(f: (A, B) => C): Par[C] = es => {
+    val (fa, fb) = (a(es), b(es))
+    UnitFuture(f(fa.get, fb.get))
+  }
+  def fork[A](a: => Par[A]): Par[A] = es => {
+    val task = new Callable[A] { def call = a(es).get }
+    es.submit(task)
+  }
+  def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
+  // def run[A](a: Par[A]): A = {}
+
+  def asyncF[A, B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
+
+  def map2WithTimeOut[A, B, C](a: Par[A], b: Par[B])(f: (A, B) => C): Par[C] = es => {
+    val (fa, fb) = (a(es), b(es))
+    Map2Future(fa, fb, f) // ここでgetをしない。つまりfの適用を遅らせる。
+  }
+
+  def map[A,B](pa: Par[A])(f: A => B): Par[B] = map2(pa, unit(()))((a, _) => f(a))
+
+  def sortPar(parList: Par[List[Int]]) = map(parList)(_.sorted)
+
+  def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] = sequence(ps.map(asyncF(f)))
+
+  def sequence[A](parList: List[Par[A]]): Par[List[A]] = {
+    parList.foldRight[Par[List[A]]](unit(Nil))((l, r) => map2(l, r)(_ :: _))
+  }
+
+  // TODO: implementation
+  // def sequenceBalanced[A](parList: List[Par[A]]): Par[List[A]] = { }
+  // def sequence2[A](parList: List[Par[A]]): Par[List[A]] = { }
 
   def sum(ints: List[Int]): Int = ints.foldLeft(0)(_+_)
 
@@ -23,8 +92,6 @@ object Par {
     }
   }
 }
-
-trait Par[A]
 
 trait Parallel {
   /**
@@ -155,8 +222,3 @@ def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
  getをrunにして、並列計算の詳細(スレッドプールの割当方など)をまかせる
  def run[A](a: Par[A]): A
  */
-
-
-
-
-
