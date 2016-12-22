@@ -50,12 +50,23 @@ object Par extends Parallel {
     val (fa, fb) = (a(es), b(es))
     UnitFuture(f(fa.get, fb.get))
   }
+  def map3[A, B, C, D](a: Par[A], b: Par[B], c: Par[C])(f: (A, B, C) => D): Par[D] = {
+    val pab: Par[C => D] = map2(a, b)((a, b) => (c: C) => f(a, b, c))
+    map2(pab, c)((g, c) => g(c))
+  }
+  def map4[A, B, C, D, E](a: Par[A], b: Par[B], c: Par[C], d: Par[D])(f: (A, B, C, D) => E): Par[E] = {
+    val pab: Par[C => D => E] = map2(a, b)((a, b) => (c: C) => (d: D) => f(a, b, c, d))
+    val pabc: Par[D => E] = map2(pab, c)((g, c) => g(c))
+    map2(pabc, d)((h, d) => h(d))
+  }
   def fork[A](a: => Par[A]): Par[A] = es => {
     val task = new Callable[A] { def call = a(es).get }
     es.submit(task)
   }
+  // forkの論理スレッドを実際にはフォークしない版
+  def delay[A](a: => Par[A]): Par[A] = es => a(es)
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
-  // def run[A](a: Par[A]): A = {}
+  def run[A](es: ExecutorService)(a: Par[A]): Future[A] = a(es)
 
   def asyncF[A, B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
 
@@ -78,6 +89,43 @@ object Par extends Parallel {
   // def sequenceBalanced[A](parList: List[Par[A]]): Par[List[A]] = { }
   // def sequence2[A](parList: List[Par[A]]): Par[List[A]] = { }
 
+  /**
+   * リストの要素を並行してフィルタリングする
+   * List[A]をParにしてリストする。そのあとList[Par[List[A]]]となるので、Parを外にだしてPar[List[List[A]]]で、内側のListをflattenしてつぶす。
+   */
+  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
+    // as.map(unit).foldRight[Par[List[A]]](unit(Nil))((l, r) => map2(l, r)((a, b) => if (f(a)) a :: b else b))
+    val pars = as.map(asyncF(a => if (f(a)) List(a) else List()))
+    map(sequence(pars))(_.flatten)
+  }
+
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = es => run(es)(choices(run(es)(n).get))
+
+  def choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] = {
+    choiceN(map(cond)(condition => if (condition) 0 else 1))(List(t, f))
+  }
+
+  def choiceMap[K,V](key: Par[K])(choices: Map[K,Par[V]]): Par[V] = es => run(es)(choices(run(es)(key).get))
+
+  def flatMap[A,B](p: Par[A])(f: A => Par[B]): Par[B] = es => run(es)(f(run(es)(p).get))
+
+  def join[A](a: Par[Par[A]]): Par[A] = {
+    es => run(es)(run(es)(a).get())
+  }
+
+  def flatMapByJoin[A,B](p: Par[A])(f: A => Par[B]): Par[B] = join(map(p)(f))
+
+  def joinByFlatMap[A](a: Par[Par[A]]): Par[A] = flatMap(a)(x => x)
+
+  // def sum_10(ints: List[Int]): Par[Int] = {
+  //  if (ints.size <= 1) {
+  //    unit(ints.headOption.getOrElse(0))
+  //  } else {
+  //    val (l, r) = ints.splitAt(ints.size/2)
+  //    map2(fork(sum_10(l)), fork(sum_10(r)))(_+_)
+  //  }
+  // }
+
   def sum(ints: List[Int]): Int = ints.foldLeft(0)(_+_)
 
   /**
@@ -94,6 +142,7 @@ object Par extends Parallel {
 }
 
 trait Parallel {
+  type Par[A] = Par.Par[A]
   /**
    * 定数値を並列計算に昇格する
    */
@@ -113,7 +162,7 @@ trait Parallel {
   /**
    * 並列計算を開始する
    */
-  def run[A](a: Par[A]): A
+  def run[A](es: ExecutorService)(a: Par[A]): Future[A]
 }
 
 /*
@@ -221,4 +270,12 @@ def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
    
  getをrunにして、並列計算の詳細(スレッドプールの割当方など)をまかせる
  def run[A](a: Par[A]): A
+ */
+
+/*
+ * map(y)(id) == y => map(map(y)(g))(f) == map(y)(f compose g)
+ * f = id, g = id
+ * map(map(y)(id))(id) == map(y)(id compose id)
+ * map(y)(id) == map(y)(id) (from map(y)(id) == y, id(x) == x, id(id(x)) => id(x) => x)
+ * y == y
  */

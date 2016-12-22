@@ -58,9 +58,10 @@ object List {
   // わからない
   def reverseByFoldLeft[A](l: List[A]): List[A] = foldLeft(l, List[A]())((acc, h) => { Cons(h, acc) })
   // わからなかった
-  def foldLeftByFoldRight[A, B](l: List[A], z: B)(f: (B, A) => B): B = {
-    foldRight(l, (b:B) => b)((a,g) => b => g(f(b,a)))(z)
-  }
+  def foldRightByFoldLeft[A,B](l: List[A], z: B)(f: (A, B) => B): B = foldLeft(l, (b: B) => b)((g, a) => b => g(f(a, b)))(z)
+  // def foldLeftByFoldRight[A, B](l: List[A], z: B)(f: (B, A) => B): B = {
+  //   foldRight(l, (b:B) => b)((a,g) => b => g(f(b,a)))(z)
+  // }
   def append[A](l1: List[A], l2: List[A]): List[A] = foldRight(l1, l2)(Cons(_, _))
   def appendAll[A](ls: List[A]*): List[A] = {
     if (ls.isEmpty) Nil else append(ls.head, appendAll(ls.tail: _*))
