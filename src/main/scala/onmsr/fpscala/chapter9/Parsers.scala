@@ -13,12 +13,8 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   /**
     * N回繰り返し
     */
-  def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = {
-    if (n <= 0) succeed(List()) else map2(p, listOfN(n - 1, p))(_ :: _)
-  }
-
+  def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = if (n <= 0) succeed(List()) else map2(p, listOfN(n - 1, p))(_ :: _)
   def char(c: Char): Parser[Char] = string(c.toString).map(_.charAt(0))
-
   implicit def string(s: String): Parser[String]
   implicit def operators[A](p: Parser[A]): ParserOperators[A] = ParserOperators[A](p)
 
@@ -29,12 +25,7 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   implicit def asStringParser[A](a: A)(implicit f: A => Parser[String]): ParserOperators[String] = ParserOperators(f(a))
   // implicit def asParser[A, B](a: A)(implicit f: A => Parser[B]): ParserOperators[B] = ParserOperators(f(a))
   def map[A, B](p: Parser[A])(f: A => B): Parser[B] = flatMap(p)(f andThen succeed)
-  def map2[A, B, C](p1: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] = {
-    for {
-      a <- p1
-      b <- p2
-    } yield f(a, b)
-  }
+  def map2[A, B, C](p1: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] = for { a <- p1; b <- p2 } yield f(a, b)
   def flatMap[A, B](p: Parser[A])(f: A => Parser[B]): Parser[B]
 
   // listOfNのn指定なし版(実装むずかしい)
@@ -42,20 +33,11 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   def many[A](p: Parser[A]): Parser[List[A]] = map2(p, many(p))(_ :: _) or succeed(List())
   def many1[A](p: Parser[A]): Parser[List[A]] = map2(p, many(p))(_ :: _)
   def length[A](p: Parser[A]): Parser[Int] = map(many(p))(_.length)
-
   def succeed[A](a: A): Parser[A] = string("").map(_ => a)
-
   def slice[A](a: Parser[A]): Parser[String]
-
   implicit def regex(r: Regex): Parser[String]
-
   // p1を実行して、p2を実行する
-  def product[A, B](p1: Parser[A], p2: => Parser[B]): Parser[(A, B)] = {
-    for {
-      a <- p1
-      b <- p2
-    } yield (a, b)
-  }
+  def product[A, B](p1: Parser[A], p2: => Parser[B]): Parser[(A, B)] = for { a <- p1; b <- p2 } yield (a, b)
   
   case class ParserOperators[A](p: Parser[A]) {
     def |[B >: A](p2: Parser[B]): Parser[B] = self.or(p, p2)
