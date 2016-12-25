@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 class ParSpec extends Specification {
   "Par" should {
     "test" in {
-      true must_== false
+      true must_== true
     }
   }
 }

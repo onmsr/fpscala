@@ -1,9 +1,9 @@
-package onmsr.fpscala.chapter6
+package onmsr.fpscala.chapter8
 
 import org.specs2.mutable.Specification
 
-class StateSpec extends Specification {
-  "State" should {
+class GenSpec extends Specification {
+  "GenSpec" should {
     "test" in {
       true must_== true
     }

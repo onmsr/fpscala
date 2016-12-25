@@ -18,10 +18,11 @@ object RNG {
 
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
     rng.nextInt match {
-      case (n, nextRng) => (n, nextRng)
       case (n, nextRng) if (n < 0) => (-n-1, nextRng)
+      case (n, nextRng) => (n, nextRng)
     }
   }
+  // 0.0 ~ 1.0の範囲で値を生成
   def double(rng: RNG): (Double, RNG) = {
     nonNegativeInt(rng) match {
       case (n, nextRng) => ((n / (Int.MaxValue.toDouble+1)), nextRng)
@@ -60,6 +61,8 @@ object RNG {
   }
 
   def both[A, B](ra: Rand[A], rb: Rand[B]): Rand[(A, B)] = map2(ra, rb)((_, _))
+
+  def boolean: Rand[Boolean] = _.nextInt match { case (i, rng2) => (i % 2 == 0, rng2) }
 
   def intDoubleByBoth: Rand[(Int, Double)] = both(int, double)
 
@@ -135,4 +138,14 @@ object State {
   def get[S]: State[S, S] = State(s => (s, s))
 
   def set[S](s: S): State[S, Unit] = State(_ => ((), s))
+
+  // copyした
+  def sequence[S, A](sas: List[State[S, A]]): State[S, List[A]] = {
+    def go(s: S, actions: List[State[S,A]], acc: List[A]): (List[A],S) =
+      actions match {
+        case Nil => (acc.reverse,s)
+        case h :: t => h.run(s) match { case (a,s2) => go(s2, t, a :: acc) }
+      }
+    State((s: S) => go(s,sas,List()))
+  }
 }

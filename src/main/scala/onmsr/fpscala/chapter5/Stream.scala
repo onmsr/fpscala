@@ -1,5 +1,7 @@
 package onmsr.fpscala.chapter5
 
+import Stream._
+
 sealed trait Stream[+A] {
   def headOption: Option[A] = {
     this match {
@@ -70,6 +72,22 @@ sealed trait Stream[+A] {
   }
 
   def append[B >: A](s: => Stream[B]): Stream[B] = foldRight(s)(Stream.cons(_, _))
+
+  def zipWith[B,C](s2: Stream[B])(f: (A,B) => C): Stream[C] =
+    unfold((this, s2)) {
+      case (Cons(h1,t1), Cons(h2,t2)) =>
+        Some((f(h1(), h2()), (t1(), t2())))
+      case _ => None
+    }
+
+  def zip[B](s2: Stream[B]): Stream[(A,B)] =
+    zipWith(s2)((_,_))
+
+  @annotation.tailrec
+  final def find(f: A => Boolean): Option[A] = this match {
+    case Empty => None
+    case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
+  }
 }
 
 case object Empty extends Stream[Nothing]
@@ -83,5 +101,23 @@ object Stream {
   def empty[A]: Stream[A] = Empty
   def apply[A](as: A*): Stream[A] = {
     if (as.isEmpty) empty else cons(as.head, apply(as.tail: _*))
+  }
+
+  val ones: Stream[Int] = Stream.cons(1, ones)
+
+  def constant[A](a: A): Stream[A] = {
+    lazy val tail: Stream[A] = Cons(() => a, () => tail)
+    tail
+  }
+
+  def from(n: Int): Stream[Int] = {
+    cons(n, from(n+1))
+  }
+
+  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = {
+    f(z) match {
+      case Some((h,s)) => cons(h, unfold(s)(f))
+      case None => empty
+    }
   }
 }

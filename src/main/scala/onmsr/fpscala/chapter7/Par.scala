@@ -1,6 +1,5 @@
 package onmsr.fpscala.chapter7
 
-
 import java.util.concurrent.{ Callable, ExecutorService, Future, TimeUnit }
 
 /**
@@ -11,7 +10,7 @@ import java.util.concurrent.{ Callable, ExecutorService, Future, TimeUnit }
  *
  */
 object Par extends Parallel {
-  type Par[A] = (ExecutorService) => Future[A]
+  override type Par[A] = (ExecutorService) => Future[A]
 
   private case class UnitFuture[A](get: A) extends Future[A] {
     def cancel(mayInterruptIfRunning: Boolean): Boolean = false
