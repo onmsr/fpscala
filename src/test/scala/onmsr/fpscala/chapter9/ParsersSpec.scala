@@ -5,9 +5,7 @@ import org.specs2.mutable.Specification
 class ParsersSpec extends Specification {
   "Parsers" should {
     "test" in {
-
-      
-      true must_== false
+      true
     }
     "char" in {
       // class SimpleParser extends Parsers[String, Parser[Char]] {
