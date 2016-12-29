@@ -34,11 +34,11 @@ class MonoidSpec extends Specification {
     "productMonoid: test" in {
       // 一時的なデータ構造に変換してから演算を行うイメージ
       case class Item(price: Int, price2: Int)
-      object ItemAddition {
+      object ItemAddition { // case classとtupleは簡単に変換できるのでscalaではこのコードはいらない
         type AccumulatorType = Tuple2[Int, Int]
         val itemAdditionMonoid: Monoid[AccumulatorType] = Monoid.productMonoid(Monoid.intAddition, Monoid.intAddition)
-        val lift: Item => AccumulatorType = { case Item(price1, price2) => (price1, price2) }
-        val unlift: AccumulatorType => Item = t => Item(price = t._1, price2 = t._2)
+        val lift: Item => AccumulatorType = Item.unapply(_).get
+        val unlift: AccumulatorType => Item = Item.tupled
       }
 
       val l = List(Item(100, 10), Item(200, 20))
@@ -50,9 +50,15 @@ class MonoidSpec extends Specification {
       case class Item(price: Int, price2: Int)
       val l = List(Item(100, 10), Item(200, 20))
       val m = Monoid.productMonoid(Monoid.intAddition, Monoid.intAddition)
-      val res = Monoid.foldMap(l, m)({ case Item(price1, price2) => (price1, price2) })
-      res._1 must_== 300
-      res._2 must_== 30
+      val res = Item.tupled(Monoid.foldMap(l, m)(Item.unapply(_).get))
+      res must_== Item(300, 30)
+
+      // こんなかんじにできるといいかも
+      // case class ItemMonoids(price: Monoid[Int], price2: Monoid[Int])
+      // val res = Monoid.caluculate(l, ItemMonoids(
+      //   price = Monoid.intAddition,
+      //   price2 = Monoid.intAddition
+      // ))
     }
 
     "functionMonoid: test1" in {
